@@ -666,7 +666,7 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 	st.Inv = append([]Item(nil), st.Inv...)
 	nearNPC := npcNear(m.p)
 	st.Quests = copyQuests(st.Quests)
-	qlabels := questLabels(&m.p.St, ox, oy, vw, vh)
+	qlabels := questLabels(&m.p.St, ox, oy, vw, vh, size)
 	qmarks := objectiveMarks(&m.p.St)
 	safe := safeAt(px, py)
 	fx := append([]Fx(nil), fxs...)

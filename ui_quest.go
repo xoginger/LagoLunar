@@ -176,10 +176,10 @@ type npcLabel struct {
 	mark rune
 }
 
-func questLabels(st *Stats, ox, oy, vw, vh int) []npcLabel {
+func questLabels(st *Stats, ox, oy, vw, vh int, size byte) []npcLabel {
 	var out []npcLabel
 	for _, n := range npcs {
-		if n.Kind != 'q' || n.X < ox-20 || n.X > ox+vw+20 || n.Y < oy || n.Y > oy+vh+8 {
+		if n.Kind != 'q' || n.X < ox-20 || n.X > ox+vw+20 || n.Y < oy || n.Y > oy+vh+20 {
 			continue
 		}
 		mk := npcMark(st, n.ID)
@@ -187,7 +187,7 @@ func questLabels(st *Stats, ox, oy, vw, vh int) []npcLabel {
 		if mk != ' ' {
 			t = string(mk) + " " + t + " " + string(mk)
 		}
-		out = append(out, npcLabel{n.X - ox, n.Y - len(questArt) - oy, t, mk})
+		out = append(out, npcLabel{n.X - ox, n.Y - npcHeight(size) - oy, t, mk})
 	}
 	return out
 }

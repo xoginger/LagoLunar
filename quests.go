@@ -27,9 +27,9 @@ func initSafeZones() {
 	for _, l := range locs {
 		switch l.Kind {
 		case "capital":
-			safeZones = append(safeZones, SafeZone{l.Name, l.X, l.Y, 120})
+			safeZones = append(safeZones, SafeZone{l.Name, l.X, l.Y, 150})
 		case "village", "pass", "monastery":
-			safeZones = append(safeZones, SafeZone{l.Name, l.X, l.Y, 45})
+			safeZones = append(safeZones, SafeZone{l.Name, l.X, l.Y, 90})
 		}
 	}
 }

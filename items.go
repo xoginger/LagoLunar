@@ -318,18 +318,28 @@ func placeNPCs() {
 			}
 		}
 	}
-	add("Mercader", lakeCX+30, lakeCY-lakeRY-8, 4)
+	at := func(key string, x, y int) (int, int) { // el lugar que dejó el generador de pueblos
+		if p, ok := spots[key]; ok {
+			return p[0], p[1]
+		}
+		return x, y
+	}
+	x, y := at("Mercader:lago", lakeCX+30, lakeCY-lakeRY-8)
+	add("Mercader", x, y, 4)
 	for _, l := range locs {
 		switch l.Kind {
 		case "capital":
-			add("Mercader Real", l.X, l.Y+6, 99)
+			x, y := at("Mercader Real", l.X, l.Y+6)
+			add("Mercader Real", x, y, 99)
 		case "village", "pass", "monastery":
-			add("Mercader", l.X, l.Y+4, 7)
+			x, y := at("Mercader:"+l.Name, l.X, l.Y+4)
+			add("Mercader", x, y, 7)
 		}
 	}
 	for _, q := range questNPCs {
 		before := len(npcs)
-		add(q.Name, q.X, q.Y, 0)
+		x, y := at(q.Name, q.X, q.Y)
+		add(q.Name, x, y, 0)
 		if len(npcs) > before {
 			n := npcs[len(npcs)-1]
 			n.Kind, n.ID = 'q', q.ID
@@ -351,9 +361,41 @@ func npcNear(p *Player) *NPC {
 	return best
 }
 
-func drawNPCs(layer map[int]Cell, vx, vy, vw, vh int) {
+// npcHeight es el alto del sprite de un NPC en el tamaño dado.
+func npcHeight(size byte) int {
+	if size == 't' {
+		return len(questArt)
+	}
+	return len(npcSprites["Mercader"][0].G)
+}
+
+func drawNPCs(layer map[int]Cell, vx, vy, vw, vh int, size byte, now time.Time) {
 	for _, n := range npcs {
-		if n.X < vx-10 || n.X > vx+vw+10 || n.Y < vy-2 || n.Y > vy+vh+8 {
+		if n.X < vx-10 || n.X > vx+vw+10 || n.Y < vy-2 || n.Y > vy+vh+20 {
+			continue
+		}
+		if spr, ok := npcSprites[n.Name]; ok && size != 't' {
+			// parpadeo: un cuadro corto cada pocos segundos, desfasado por NPC
+			f := 0
+			if (now.UnixMilli()+int64(n.X*37+n.Y*11))%3700 < 160 {
+				f = 1
+			}
+			fr := spr[f]
+			h := len(fr.G)
+			for r, line := range fr.G {
+				lr := []rune(line)
+				for i, ch := range lr {
+					if ch != ' ' {
+						layer[(n.Y-h+1+r)*W+n.X-len(lr)/2+i] = Cell{ch, hexRGB(fr.C[r][i*6 : i*6+6])}
+					}
+				}
+			}
+			if n.Kind != 'q' {
+				lab := []rune(n.Name + " [E]")
+				for i, ch := range lab {
+					layer[(n.Y-h)*W+n.X-len(lab)/2+i] = Cell{ch, RGB{255, 220, 120}}
+				}
+			}
 			continue
 		}
 		art := npcArt

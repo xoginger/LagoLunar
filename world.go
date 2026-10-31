@@ -37,6 +37,7 @@ const (
 	tFloor
 	tLava
 	tIce
+	tPave // empedrado de pueblos y ciudades
 )
 
 const (
@@ -147,16 +148,16 @@ type Loc struct {
 }
 
 const lakeCX, lakeCY, lakeRX, lakeRY = 1080, 640, 110, 42
-const capX0, capY0, capX1, capY1 = 1290, 540, 1650, 740
+const capX0, capY0, capX1, capY1 = 1240, 520, 1700, 780
 
 var locs = []Loc{
 	{"Lago Lunar", lakeCX, lakeCY, "lake", 150},
-	{"Ciudad de Lumbria", (capX0 + capX1) / 2, (capY0 + capY1) / 2, "capital", 210},
+	{"Ciudad de Lumbria", (capX0 + capX1) / 2, (capY0 + capY1) / 2, "capital", 260},
 	{"Tumba Helada", 170, 190, "crypt", 45},
 	{"Cueva de Hielo", 400, 300, "cave", 45},
 	{"Guarida del Invierno", 330, 470, "cave", 45},
 	{"Volcán Ceniza", 780, 160, "volcano", 60},
-	{"Monasterio de Ascua", 1150, 110, "monastery", 55},
+	{"Monasterio de Ascua", 1150, 110, "monastery", 90},
 	{"Cueva de las Colinas", 1180, 460, "cave", 45},
 	{"Templo Eterno", 660, 560, "temple", 50},
 	{"Mansión Embrujada", 690, 800, "mansion", 55},
@@ -183,11 +184,11 @@ var locs = []Loc{
 	{"Carnaval Errante", 1980, 750, "carnival", 60},
 	{"Campamento Orco", 1960, 920, "orc", 60},
 	{"Minas de la Sabana", 1250, 880, "mine", 55},
-	{"Paso de los Mercaderes", 1520, 1010, "pass", 60},
+	{"Paso de los Mercaderes", 1520, 1010, "pass", 90},
 	{"Prisión Antigua", 1450, 1140, "prison", 50},
 	{"Cueva del Trueno", 2160, 1030, "cave", 45},
 	{"Guarida Garra de Trueno", 1960, 1120, "cave", 45},
-	{"Aldea del Alba", 2620, 1000, "village", 80},
+	{"Aldea del Alba", 2620, 1000, "village", 150},
 	{"Playa Dorada", 2700, 1150, "beach", 80},
 	{"Cueva del Sauce", 1500, 420, "cave", 40},
 	{"Santuario de Piedra", 900, 330, "temple", 45},
@@ -222,21 +223,10 @@ var palm = []string{"\\\\|//", "-=@=-", " /|\\ ", "  (  ", "   ) "}
 var cactus = []string{" _ ", "| |_", "| |/", "| | "}
 var reeds = []string{"| ,|", "|,||"}
 var crystal = []string{" /\\ ", "/**\\", "\\**/"}
-var house = []string{"  ____  ", " /####\\ ", "/######\\", "|[] []|", "|_|][|_|"}
-var ruinHouse = []string{"  _  _  ", " /#  #\\ ", "/#     \\", "|[]  .|", "'-- .-'"}
-var tower = []string{" [#] ", " |#| ", " |o| ", " |#| ", " |#| ", " |#| ", "/___\\"}
-var temple = []string{"      /\\      ", "     /  \\     ", "    /____\\    ", "  _|[]  []|_  ", " | |  /\\  | | ", " |_|__||__|_| ", "/____________\\"}
-var castle = []string{"[#]    [#]    [#]", "|#|____|#|____|#|", "|  []   ^   []  |", "|   []  |  []   |", "|_______|_______|"}
-var pyramid = []string{"         /\\         ", "        /##\\        ", "       /####\\       ", "      /######\\      ", "     /########\\     ", "    /##########\\    ", "   /############\\   ", "  /######[]######\\  ", " /################\\ ", "/__________________\\"}
-var tent = []string{"  /\\  ", " /  \\ ", "/_||_\\"}
-var hut = []string{" /^\\ ", "/___\\", "|_|_|"}
-var mansion = []string{"   /\\      /\\   ", "  /  \\____/  \\  ", " |[] [] [] [] | ", " |[]   ||   []| ", " |_____||_____| "}
-var crypt = []string{"  _+_  ", " /   \\ ", "| RIP |", "|_[]__|"}
 var ship = []string{"   |\\   ", "   | \\  ", "   |__\\ ", "\\______/"}
 var volcano = []string{"      ,~,      ", "     / ~ \\     ", "    /  ~  \\    ", "   /   ~   \\   ", "  /    ~    \\  ", " /     ~     \\ ", "/_____________\\"}
 var caveMouth = []string{"  ____  ", " /    \\ ", "/ #### \\", "| #### |"}
 var wheel = []string{"  .-o-.  ", " o  |  o ", "o---+---o", " o  |  o ", "  '-o-'  ", "   /|\\   "}
-var fountain = []string{" .-~~~-. ", "( ~ o ~ )", " '-...-' "}
 var moonArt = []string{"   .-'''-.   ", "  /  o    \\  ", " |   ()  . | ", " |  .   () | ", "  \\   o   /  ", "   '-...-'   "}
 var cloud = []string{"  .--.   ", " (    )_ ", "(_______)"}
 
@@ -296,6 +286,9 @@ func ground(x, y int) {
 		}
 	case tBridge:
 		ch, c = '#', RGB{150, 105, 60}
+	case tPave:
+		v := 125 + n*40
+		ch, c = []byte{'.', ',', '_', '.', ':', ' ', '\''}[int(n*41)%7], RGB{v, v * 0.95, v * 0.88}
 	case tLava:
 		ch, c = []byte{'~', '~', '=', '-'}[int(n*7)%4], RGB{230 + n*25, 70 + n*80, 20}
 	case tIce:
@@ -712,6 +705,7 @@ func genMap() {
 	for li, l := range locs {
 		buildLoc(r, li, l)
 	}
+	buildLakeHamlet(r)
 	stamp(lakeCX+90, lakeCY-60, moonArt, nil, -1, solid(RGB{235, 230, 190}))
 
 	// alto de cada cuerpo de agua, para los reflejos
@@ -744,104 +738,9 @@ func clearFloor(cx, cy, rx, ry int) {
 }
 
 func buildLoc(r *rand.Rand, li int, l Loc) {
-	stone := func(rune, int, int) RGB { v := 130 + 60*r.Float64(); return RGB{v, v * 0.93, v * 0.85} }
-	roofed := func(roof RGB) func(ch rune, i, j int) RGB {
-		return func(ch rune, i, j int) RGB {
-			if i < 3 {
-				return roof
-			}
-			return stone(ch, i, j)
-		}
-	}
-	roofs := []RGB{{170, 60, 50}, {60, 90, 170}, {170, 120, 50}, {90, 140, 70}, {140, 70, 140}}
 	switch l.Kind {
 	case "capital":
-		// foso, murallas, puertas, calles, casas y palacio
-		for y := capY0 - 6; y <= capY1+6; y++ {
-			for x := capX0 - 10; x <= capX1+10; x++ {
-				in := x >= capX0 && x <= capX1 && y >= capY0 && y <= capY1
-				moat := !in && (x < capX0-6 || x > capX1+6 || y < capY0-3 || y > capY1+3)
-				switch {
-				case moat:
-					setT(x, y, tLake)
-				case !in:
-					setT(x, y, tGrass)
-				case x <= capX0+1 || x >= capX1-1 || y == capY0 || y == capY1:
-					setT(x, y, tWall)
-				default:
-					setT(x, y, tFloor)
-				}
-			}
-		}
-		cx, cy := (capX0+capX1)/2, (capY0+capY1)/2
-		for y := capY0 - 6; y <= capY1+6; y++ { // puertas N/S y puentes
-			for x := cx - 3; x <= cx+3; x++ {
-				if y < capY0+1 || y > capY1-1 {
-					t := tRoad
-					if y < capY0 || y > capY1 {
-						t = tBridge
-					}
-					if y == capY0-6 || y == capY1+6 {
-						continue
-					}
-					setT(x, y, t)
-				}
-			}
-		}
-		for x := capX0 - 10; x <= capX1+10; x++ { // puertas E/O
-			for y := cy - 1; y <= cy+1; y++ {
-				if x < capX0+2 || x > capX1-2 {
-					t := tRoad
-					if x < capX0 || x > capX1 {
-						t = tBridge
-					}
-					setT(x, y, t)
-				}
-			}
-		}
-		for y := capY0 + 1; y < capY1; y++ { // calles
-			for x := capX0 + 2; x < capX1-1; x++ {
-				if (x-capX0)%45 < 3 || (y-capY0)%22 < 2 || abs(x-cx) < 3 || abs(y-cy) < 2 {
-					setT(x, y, tRoad)
-				}
-			}
-		}
-		for y := capY0 - 8; y <= capY1+8; y++ {
-			for x := capX0 - 12; x <= capX1+12; x++ {
-				if inb(x, y) {
-					ground(x, y)
-				}
-			}
-		}
-		for y := capY0; y <= capY1; y++ { // muralla
-			for x := capX0; x <= capX1; x++ {
-				if getT(x, y) == tWall {
-					setCell(x, y, '#', stone('#', 0, 0))
-				}
-			}
-		}
-		for bx := capX0 + 3; bx < capX1-12; bx += 45 {
-			for by := capY0 + 2; by < capY1-6; by += 22 {
-				for k := 0; k < 8; k++ {
-					art := house
-					if r.Intn(5) == 0 {
-						art = tent
-					}
-					stamp(bx+2+r.Intn(34), by+1+r.Intn(14), art, func(t uint8) bool { return t == tFloor }, int(tWall), roofed(roofs[r.Intn(len(roofs))]))
-				}
-			}
-		}
-		for _, p := range [][2]int{{capX0 - 2, capY0 - 4}, {capX1 - 3, capY0 - 4}, {capX0 - 2, capY1 - 3}, {capX1 - 3, capY1 - 3}} {
-			stamp(p[0], p[1], tower, nil, int(tWall), stone)
-		}
-		clearFloor(cx, cy-10, 22, 7)
-		stampC(cx, cy-12, castle, int(tWall), roofed(RGB{200, 170, 60}))
-		stampC(cx, cy-3, fountain, int(tWall), func(ch rune, i, j int) RGB {
-			if ch == '~' || ch == 'o' {
-				return RGB{120, 180, 255}
-			}
-			return RGB{170, 170, 175}
-		})
+		buildCapital(r)
 	case "cave":
 		ellipseDo(l.X, l.Y-4, 16, 7, func(x, y int, d float64) {
 			if d < 0.95 {
@@ -857,9 +756,13 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 			return RGB{150, 140, 130}
 		})
 	case "temple", "monastery":
-		clearFloor(l.X, l.Y, 22, 8)
-		col := map[string]RGB{"Templo Eterno": {120, 200, 255}, "Templo Oculto": {200, 120, 255}, "Templo Maldito": {150, 60, 70}, "Santuario de Piedra": {170, 150, 110}, "Monasterio de Ascua": {230, 120, 60}}[l.Name]
-		stampC(l.X, l.Y-1, temple, int(tWall), roofed(col))
+		if l.Kind == "monastery" {
+			buildMonastery(r, l)
+			break
+		}
+		clearRect(l.X-40, l.Y-30, l.X+40, l.Y+10, tFloor)
+		col := map[string]RGB{"Templo Eterno": {120, 200, 255}, "Templo Oculto": {200, 120, 255}, "Templo Maldito": {150, 60, 70}, "Santuario de Piedra": {170, 150, 110}}[l.Name]
+		placeAt(mkTemple(64, 30, col, false), l.X, l.Y+4)
 	case "volcano":
 		stampC(l.X, l.Y, volcano, int(tWall), func(ch rune, i, j int) RGB {
 			if ch == '~' || ch == ',' {
@@ -868,26 +771,23 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 			return RGB{90, 80, 80}
 		})
 	case "mansion":
-		clearFloor(l.X, l.Y, 20, 7)
-		stampC(l.X, l.Y-1, mansion, int(tWall), roofed(RGB{120, 70, 150}))
+		clearRect(l.X-44, l.Y-34, l.X+44, l.Y+10, tFloor)
+		placeAt(mkHouse(r, 72, 34, RGB{120, 70, 150}, matStone, 2, ""), l.X, l.Y+4)
 	case "hut":
-		clearFloor(l.X, l.Y, 8, 3)
-		stampC(l.X, l.Y-1, hut, int(tWall), roofed(RGB{150, 110, 60}))
+		clearRect(l.X-22, l.Y-26, l.X+22, l.Y+8, tFloor)
+		placeAt(mkHouse(r, 30, 24, RGB{170, 140, 70}, matWood, 1, ""), l.X, l.Y+3)
 	case "pyramid":
-		clearFloor(l.X, l.Y, 22, 8)
-		stampC(l.X, l.Y-1, pyramid, int(tWall), func(ch rune, i, j int) RGB {
-			v := 180 + 40*h2(i, j, 1)
-			return RGB{v, v * 0.8, v * 0.45}
-		})
+		clearRect(l.X-50, l.Y-32, l.X+50, l.Y+10, tSand)
+		placeAt(mkPyramid(92, 34), l.X, l.Y+4)
 	case "castle", "skycastle":
-		clearFloor(l.X, l.Y, 22, 8)
+		clearRect(l.X-56, l.Y-50, l.X+56, l.Y+12, tFloor)
 		roof := RGB{90, 160, 230}
 		if l.Kind == "skycastle" {
 			roof = RGB{230, 230, 255}
-			stampC(l.X-14, l.Y-6, cloud, -1, solid(RGB{220, 225, 240}))
-			stampC(l.X+14, l.Y-6, cloud, -1, solid(RGB{220, 225, 240}))
+			stampC(l.X-50, l.Y-44, cloud, -1, solid(RGB{220, 225, 240}))
+			stampC(l.X+50, l.Y-40, cloud, -1, solid(RGB{220, 225, 240}))
 		}
-		stampC(l.X, l.Y-1, castle, int(tWall), roofed(roof))
+		placeAt(mkCastle(90, 48, roof), l.X, l.Y+4)
 	case "arena":
 		clearFloor(l.X, l.Y, 46, 18)
 		ellipseDo(l.X, l.Y, 40, 15, func(x, y int, d float64) {
@@ -907,19 +807,20 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 			}
 			return RGB{200, 200, 210}
 		})
-		for k := 0; k < 9; k++ {
-			stamp(l.X-34+r.Intn(62), l.Y-12+r.Intn(22), tent, func(t uint8) bool { return t == tFloor }, int(tWall), solid([]RGB{{255, 80, 120}, {255, 200, 60}, {80, 200, 255}, {160, 255, 120}}[k%4]))
+		tc := []RGB{{255, 80, 120}, {255, 200, 60}, {80, 200, 255}, {160, 255, 120}}
+		for k, p := range [][2]int{{-60, -6}, {60, -6}, {-34, 14}, {34, 14}} {
+			placeAt(mkTent(28, 16, tc[k], RGB{245, 240, 230}), l.X+p[0], l.Y+p[1])
 		}
 	case "orc":
-		clearFloor(l.X, l.Y, 38, 14)
-		ellipseDo(l.X, l.Y, 34, 13, func(x, y int, d float64) {
+		clearFloor(l.X, l.Y, 76, 28)
+		ellipseDo(l.X, l.Y, 72, 26, func(x, y int, d float64) {
 			if d > 0.9 && !(abs(x-l.X) < 3) {
 				setT(x, y, tWall)
 				setCell(x, y, 'I', RGB{140, 95, 50})
 			}
 		})
-		for k := 0; k < 10; k++ {
-			stamp(l.X-26+r.Intn(48), l.Y-9+r.Intn(16), hut, func(t uint8) bool { return t == tFloor }, int(tWall), solid(RGB{120, 150, 70}))
+		for _, p := range [][2]int{{-36, -4}, {0, -8}, {36, -4}, {-22, 18}, {22, 18}} {
+			placeAt(mkTent(24, 15, RGB{120, 140, 60}, RGB{140, 100, 60}), l.X+p[0], l.Y+p[1])
 		}
 	case "mine":
 		ellipseDo(l.X, l.Y-6, 26, 9, func(x, y int, d float64) {
@@ -943,13 +844,15 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 		setCell(l.X-3, l.Y+3, 'o', RGB{180, 160, 120})
 		setCell(l.X+3, l.Y+3, 'o', RGB{180, 160, 120})
 	case "tower":
-		clearFloor(l.X, l.Y, 8, 4)
-		stampC(l.X, l.Y-2, tower, int(tWall), stone)
+		clearRect(l.X-16, l.Y-46, l.X+16, l.Y+6, tFloor)
+		placeAt(mkTower(22, 46, RGB{90, 100, 160}), l.X, l.Y+2)
 	case "crypt":
-		clearFloor(l.X, l.Y, 12, 4)
-		stampC(l.X, l.Y-1, crypt, int(tWall), solid(RGB{170, 170, 190}))
-		for k := 0; k < 8; k++ {
-			setCell(l.X-10+r.Intn(20), l.Y+2+r.Intn(2), '+', RGB{150, 150, 160})
+		clearRect(l.X-30, l.Y-24, l.X+30, l.Y+8, tFloor)
+		placeAt(mkTemple(36, 22, RGB{150, 150, 170}, false), l.X, l.Y+2)
+		for k := 0; k < 10; k++ {
+			x, y := l.X-28+r.Intn(56), l.Y+4+r.Intn(3)
+			setCell(x, y, '+', RGB{150, 150, 160})
+			setT(x, y, tWall)
 		}
 	case "prison":
 		clearFloor(l.X, l.Y, 26, 9)
@@ -967,11 +870,7 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 			}
 		}
 	case "village":
-		clearFloor(l.X, l.Y, 50, 18)
-		for k := 0; k < 18; k++ {
-			stamp(l.X-44+r.Intn(84), l.Y-14+r.Intn(26), house, func(t uint8) bool { return t == tFloor }, int(tWall), roofed(roofs[r.Intn(len(roofs))]))
-		}
-		stampC(l.X, l.Y, fountain, int(tWall), solid(RGB{140, 190, 255}))
+		buildVillage(r, l)
 	case "cove":
 		for k := 0; k < 4; k++ {
 			stamp(l.X+30+r.Intn(60), l.Y-15+r.Intn(30), ship, func(t uint8) bool { return t == tSea }, -1, func(ch rune, i, j int) RGB {
@@ -981,8 +880,9 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 				return RGB{130, 90, 50}
 			})
 		}
-		for k := 0; k < 6; k++ {
-			stamp(l.X-40+r.Intn(40), l.Y-12+r.Intn(24), hut, func(t uint8) bool { return t == tSand || t == tGrass || t == tForest }, int(tWall), solid(RGB{150, 110, 70}))
+		for _, p := range [][2]int{{-50, -14}, {-14, -10}, {-40, 22}} {
+			clearRect(l.X+p[0]-16, l.Y+p[1]-22, l.X+p[0]+16, l.Y+p[1]+2, tSand)
+			placeAt(mkHouse(r, 28, 22, RGB{170, 140, 70}, matWood, 1, ""), l.X+p[0], l.Y+p[1])
 		}
 	case "crater":
 		ellipseDo(l.X, l.Y, 90, 38, func(x, y int, d float64) {
@@ -1001,9 +901,7 @@ func buildLoc(r *rand.Rand, li int, l Loc) {
 			setCell(x, y, '@', RGB{120, 60, 80})
 		})
 	case "pass":
-		for k := 0; k < 3; k++ {
-			stamp(l.X-20+r.Intn(40), l.Y-8+r.Intn(14), tent, nil, int(tWall), solid([]RGB{{200, 150, 80}, {160, 80, 60}, {200, 200, 150}}[k]))
-		}
+		buildCamp(r, l)
 	}
 	_ = li
 }
@@ -1076,7 +974,7 @@ func composeInto(buf [][]Cell, now time.Time, size byte, vx, vy, vw, vh int) [][
 	clear(layer)
 	rows, cols := figRows(size), figCols(size)
 	var waterPlayers []*Player
-	drawNPCs(layer, vx, vy, vw, vh)
+	drawNPCs(layer, vx, vy, vw, vh, size, now)
 	drawEnemies(layer, vx, vy, vw, vh, now)
 	for p := range players {
 		if p.X < vx-cols-10 || p.X > vx+vw+cols+10 || p.Y < vy-5 || p.Y > vy+vh+rows+60 {
@@ -1255,6 +1153,8 @@ func terrainColor(t, b uint8) RGB {
 		return RGB{215, 195, 135}
 	case tRoad, tBridge:
 		return RGB{170, 135, 90}
+	case tPave:
+		return RGB{150, 145, 135}
 	case tWall:
 		return RGB{190, 185, 180}
 	case tFloor:
@@ -1315,7 +1215,7 @@ func minimap(mw, mh int) [][]RGB {
 					i := idx(wx, wy)
 					t := ttype[i]
 					w := 1
-					if t == tRiver || t == tWall || t == tRoad {
+					if t == tRiver || t == tWall || t == tRoad || t == tPave {
 						w = 3
 					}
 					cnt[[2]uint8{t, biome[i]}] += w

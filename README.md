@@ -21,7 +21,7 @@ amurallada y el Lago Lunar, donde empieza todo.
 | ![En el juego](docs/img/ingame.png) | ![Combate](docs/img/combat.png) |
 | ![Tienda](docs/img/shop.png) | ![Misiones](docs/img/quest.png) |
 | ![Equipo](docs/img/party.png) | ![Chat](docs/img/chat.png) |
-| ![La capital](docs/img/ingame_capital.png) | ![La pirámide](docs/img/ingame_piramide.png) |
+| ![La capital](docs/img/capital.png) | ![Aldea del Alba](docs/img/pueblo.png) |
 
 ![Animaciones de ataque](docs/img/anim.gif)
 
@@ -40,6 +40,9 @@ Más imágenes en [docs/img](docs/img), entre ellas el
   del mapa.
 - Tienda, inventario, pociones, armas y armaduras.
 - Misiones con NPCs, zonas seguras y un diario de misiones.
+- Pueblos y ciudades a escala de los personajes: casas con puerta y ventanas,
+  murallas, torres, templos, puestos de mercado, pozos y calles empedradas.
+- Cada NPC tiene su propio dibujo, del mismo estilo que los personajes, y parpadea.
 - Equipos de hasta 4 jugadores con XP compartida y chat de equipo.
 - Cuentas con contraseña (bcrypt) o partida rápida como invitado.
 - Panel de administración y una CLI para ver quién está conectado.
@@ -185,6 +188,8 @@ sprites.go     dibujo de personajes (sprites_gen.go es generado)
 combat.go      enemigos, clases, combate y simulación
 anim.go        poses de ataque, proyectiles y efectos
 items.go       objetos, inventario y NPCs
+towns.go       casas, murallas y trazado de pueblos
+npcs_gen.go    dibujos de los NPCs (generado con tools/gen_npcs.py)
 ui_shop.go     tienda e inventario
 quests.go      misiones y zonas seguras
 ui_quest.go    diálogos y diario
