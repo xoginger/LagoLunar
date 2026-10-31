@@ -547,15 +547,7 @@ func drawEnemies(layer map[int]Cell, vx, vy, vw, vh int, now time.Time) {
 				layer[(e.Y-h+1+r)*W+ex-len(lr)/2+i] = Cell{ch, c}
 			}
 		}
-		// nombre y barra de vida
-		label := []rune(fmt.Sprintf("%s Nv%d", e.T.Name, e.Lvl))
-		col := RGB{230, 230, 230}
-		if e.Target != nil {
-			col = RGB{255, 120, 100}
-		}
-		for i, ch := range label {
-			layer[(e.Y-h-1)*W+e.X-len(label)/2+i] = Cell{ch, col}
-		}
+		// barra de vida (el nombre lo pone layoutTags para que no se encime)
 		bw := 8
 		fill := int(math.Ceil(float64(bw) * float64(e.HP) / float64(e.MaxHP)))
 		for i := 0; i < bw; i++ {

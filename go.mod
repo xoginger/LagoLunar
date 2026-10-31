@@ -1,4 +1,4 @@
-module asciigame
+module github.com/xoginger/LagoLunar
 
 go 1.27.3
 

@@ -55,6 +55,7 @@ type Player struct {
 	LastMove  time.Time
 	Msg       string
 	MsgAt     time.Time
+	MsgParty  bool // el globo es de chat de equipo
 	St        Stats
 	Party     *Party
 	Invite    *Invite
@@ -129,7 +130,7 @@ type model struct {
 	enteredAt            time.Time
 	camX, camY, camW     int
 	camH                 int
-	camOK                bool
+	camOK, camMove       bool
 	cbuf                 [][]Cell
 	cvbuf                *canvas
 	dirAt, stepAt        time.Time
@@ -631,15 +632,22 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 		return nil
 	}
 	px, py, n := m.p.X, m.p.Y, len(players)
-	ox, oy := clamp(px-vw/2, 0, max(0, W-vw)), clamp(py-vh/2-figRows(size)/3, 0, max(0, H-vh))
+	// el jugador va un poco abajo del centro (pies a 2/3 de la altura) para
+	// que se vean los techos y las torres de arriba.
+	ox, oy := clamp(px-vw/2, 0, max(0, W-vw)), clamp(py-vh*2/3, 0, max(0, H-vh))
 	// zona muerta de cámara: la vista no se mueve mientras el jugador anda cerca
-	// del centro y luego salta para recentrar. Con la cámara quieta solo se
-	// reenvían los sprites que se mueven y no toda la pantalla.
-	if m.camOK && m.camW == vw && m.camH == vh && abs(ox-m.camX) <= vw/5 && abs(oy-m.camY) <= vh/5 {
-		ox, oy = m.camX, m.camY
-	} else {
-		m.camX, m.camY, m.camW, m.camH, m.camOK = ox, oy, vw, vh, true
+	// de su lugar. Al salirse, la cámara se desliza en unos cuantos cuadros
+	// hasta recentrar y se vuelve a quedar quieta; con la cámara quieta solo
+	// se reenvían los sprites que se mueven y no toda la pantalla.
+	switch {
+	case !m.camOK || m.camW != vw || m.camH != vh || abs(ox-m.camX) > vw || abs(oy-m.camY) > vh:
+		m.camX, m.camY, m.camW, m.camH, m.camOK, m.camMove = ox, oy, vw, vh, true, false
+	case m.camMove || abs(ox-m.camX) > vw/5 || abs(oy-m.camY) > vh/5:
+		m.camX += camStep(ox - m.camX)
+		m.camY += camStep(oy - m.camY)
+		m.camMove = m.camX != ox || m.camY != oy
 	}
+	ox, oy = m.camX, m.camY
 	f := composeInto(m.cbuf, time.Now(), size, ox, oy, vw, vh)
 	m.cbuf = f
 	type dot struct {
@@ -671,17 +679,18 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 	safe := safeAt(px, py)
 	fx := append([]Fx(nil), fxs...)
 	type bub struct {
-		x, y int
-		t    string
+		x, y  int
+		t     string
+		party bool
 	}
 	var bubs []bub
 	now := time.Now()
 	rows := figRows(size)
 	for p := range players {
-		if p.Msg != "" && now.Sub(p.MsgAt) < bubbleLife {
+		if p.Msg != "" && now.Sub(p.MsgAt) < bubbleLife && (!p.MsgParty || samePartyP(p, m.p)) {
 			sx, sy := p.X-ox, p.Y-rows-1-oy
 			if sx > -bubbleW && sx < vw+bubbleW && sy > -rows && sy < vh+rows {
-				bubs = append(bubs, bub{sx, sy, p.Msg})
+				bubs = append(bubs, bub{sx, sy, p.Msg, p.MsgParty})
 			}
 		}
 	}
@@ -703,15 +712,36 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 	if o := nearestOther(m.p); o != nil {
 		nearOther = o.Name
 	}
-	type plabel struct {
-		x, y int
-		name string
-	}
-	var plabels []plabel
-	for _, r := range prows {
-		if !r.Me {
-			plabels = append(plabels, plabel{r.p.X - ox - len([]rune(r.Name))/2, r.p.Y - rows - oy, r.Name})
+	// nombres flotantes; se acomodan después con layoutTags
+	var tags []tag
+	var bars [][3]int // x, y, ancho de las barras de vida
+	for p := range players {
+		if p.X < ox-40 || p.X > ox+vw+40 || p.Y < oy || p.Y > oy+vh+rows {
+			continue
 		}
+		t := tag{p.X - ox, p.Y - rows - oy, p.Name, RGB{230, 230, 230}, tagPlayer}
+		switch {
+		case p == m.p:
+			t.c, t.pri = RGB{255, 255, 255}, tagSelf
+		case samePartyP(p, m.p):
+			t.c, t.pri = RGB{80, 240, 255}, tagParty
+		}
+		tags = append(tags, t)
+	}
+	for _, l := range qlabels {
+		tags = append(tags, tag{l.x, l.y, l.text, npcTagColor(l.mark), tagNPC})
+	}
+	for _, e := range enemies {
+		if (e.Dead && !now.Before(e.HitAt)) || e.X < ox-12 || e.X > ox+vw+12 || e.Y < oy-2 || e.Y > oy+vh+8 {
+			continue
+		}
+		h := len(e.T.Art)
+		c := RGB{230, 230, 230}
+		if e.Target != nil {
+			c = RGB{255, 120, 100}
+		}
+		tags = append(tags, tag{e.X - ox, e.Y - h - 1 - oy, fmt.Sprintf("%s Nv%d", e.T.Name, e.Lvl), c, tagEnemy})
+		bars = append(bars, [3]int{e.X - ox - 4, e.Y - h - oy, 8})
 	}
 	mu.Unlock()
 
@@ -753,8 +783,20 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 			for i := range used {
 				used[i] = make([]bool, mw)
 			}
+			mark := make([][]bool, mh)
+			for i := range mark {
+				mark[i] = make([]bool, mw)
+			}
 			for _, l := range locs {
 				x, y := l.X*mw/W, l.Y*mh/H
+				// dos lugares en la misma celda: el segundo se corre a un lado
+				for _, d := range [...]int{0, 1, -1, 2, -2} {
+					if xx := x + d; xx >= 0 && xx < mw && !mark[y][xx] {
+						x = xx
+						break
+					}
+				}
+				mark[y][x], used[y][x] = true, true
 				cv.c[y0+y][x0+x].Ch, cv.c[y0+y][x0+x].Fg = '◆', RGB{255, 230, 120}
 				if m.mini == 2 {
 					nm := []rune(l.Name)
@@ -785,17 +827,35 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 				}
 			}
 			sort.SliceStable(dots, func(i, j int) bool { return !dots[i].me && dots[j].me })
+			// varios jugadores en la misma celda se muestran con un número
+			count := map[[2]int]int{}
+			for _, d := range dots {
+				count[[2]int{d.x * mw / W, d.y * mh / H}]++
+			}
 			for _, d := range dots {
 				x, y := d.x*mw/W, d.y*mh/H
 				ch, c := '●', d.c
 				if c.R == -2 {
 					ch, c = '◉', RGB{80, 240, 255}
 					nm := []rune(d.name)
-					for i, r := range nm {
-						if xx := x0 + x + 2 + i; xx < x0+mw && i < 10 {
-							cv.c[y0+y][xx].Ch, cv.c[y0+y][xx].Fg = r, RGB{80, 240, 255}
+					if len(nm) > 10 {
+						nm = nm[:10]
+					}
+					ok := x+2+len(nm) < mw
+					for i := -1; ok && i <= len(nm); i++ {
+						if used[y][x+2+i] {
+							ok = false
 						}
 					}
+					for i, r := range nm {
+						if ok {
+							cv.c[y0+y][x0+x+2+i].Ch, cv.c[y0+y][x0+x+2+i].Fg = r, RGB{80, 240, 255}
+							used[y][x+2+i] = true
+						}
+					}
+				}
+				if n := count[[2]int{x, y}]; n > 1 && !d.me {
+					ch = rune('0' + min(n, 9))
 				}
 				if d.me {
 					ch = '@'
@@ -834,16 +894,27 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 			}
 		}
 	}
-	drawQuestLabels(cv, qlabels)
-	for _, l := range plabels {
-		if m.mini == 2 {
-			break
+	if m.mini != 2 {
+		busy := make([][]bool, vh)
+		for y := range busy {
+			busy[y] = make([]bool, vw)
 		}
-		for i, ch := range []rune(l.name) {
-			if x := l.x + i; x >= 0 && x < vw && l.y >= 0 && l.y < vh {
-				cv.c[l.y][x].Ch, cv.c[l.y][x].Fg = ch, RGB{80, 240, 255}
+		for _, b := range bars {
+			for x := b[0]; x < b[0]+b[2]; x++ {
+				if x >= 0 && x < vw && b[1] >= 0 && b[1] < vh {
+					busy[b[1]][x] = true
+				}
 			}
 		}
+		if m.mini == 1 { // el minimapa no se tapa
+			mw, mh := min(64, vw/2), min(24, vh/2)
+			for y := 0; y < mh+2 && y < vh; y++ {
+				for x := max(0, vw-mw-3); x < vw; x++ {
+					busy[y][x] = true
+				}
+			}
+		}
+		layoutTags(cv, tags, busy)
 	}
 	if m.mini != 2 && m.win != 6 {
 		drawHUD(cv, st, sprite, now2)
@@ -872,12 +943,22 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 		cv.text(-1, vh-2, " Pulsa E para "+verb+nearNPC.Name+" ", RGB{255, 220, 120})
 	}
 	m.drawWin(cv, st, sprite)
+	if m.win != 0 && safe == nil {
+		// con un menú abierto el mundo sigue: fuera de zona segura te avisamos
+		t := " ⚠ Estás en peligro "
+		x := (vw - len([]rune(t))) / 2
+		for i, ch := range []rune(t) {
+			if xx := x + i; xx >= 0 && xx < vw {
+				cv.c[0][xx] = TCell{ch, RGB{255, 240, 240}, RGB{170, 20, 20}}
+			}
+		}
+	}
 	mu.Lock()
 	ann := curAnnounce
 	mu.Unlock()
 	drawAnnouncement(cv, ann, now2)
 	for _, b := range bubs {
-		cv.drawBubble(b.x, b.y, b.t)
+		cv.drawBubble(b.x, b.y, b.t, b.party)
 	}
 	// últimos mensajes del chat, abajo a la izquierda
 	for i, l := range logl {
@@ -938,6 +1019,17 @@ func (m *model) gameCanvas(vw, vh int) *canvas {
 	cv.c = append(cv.c, srow)
 	cv.h++
 	return cv
+}
+
+// camStep avanza un tercio de lo que falta, al menos una celda.
+func camStep(d int) int {
+	switch {
+	case d > 0:
+		return max(1, (d+2)/3)
+	case d < 0:
+		return min(-1, (d-2)/3)
+	}
+	return 0
 }
 
 func cl(v float64) int { return clamp(int(v), 0, 255) }
@@ -1039,6 +1131,7 @@ func main() {
 	}
 	log.Info("accounts", "path", accPath, "n", len(accounts))
 	loadBans()
+	startBackups()
 	go onlineWriter()
 	port := "2222"
 	if v := os.Getenv("PORT"); v != "" {

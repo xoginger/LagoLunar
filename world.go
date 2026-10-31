@@ -997,10 +997,6 @@ func composeInto(buf [][]Cell, now time.Time, size byte, vx, vy, vw, vh int) [][
 		for _, o := range ov {
 			layer[(p.Y+o.dy)*W+p.X+o.dx+lean] = Cell{o.ch, o.c}
 		}
-		lx := p.X - len([]rune(p.Name))/2
-		for i, ch := range []rune(p.Name) {
-			layer[(p.Y-rows)*W+lx+i] = Cell{ch, RGB{230, 230, 230}}
-		}
 	}
 	src := func(x, y int) (Cell, bool) {
 		if !inb(x, y) {
@@ -1115,10 +1111,6 @@ func composeInto(buf [][]Cell, now time.Time, size byte, vx, vy, vw, vh int) [][
 		})
 		for _, o := range ov {
 			put(p.X+o.dx+lean, p.Y+o.dy, Cell{o.ch, o.c})
-		}
-		lx := p.X - len([]rune(p.Name))/2
-		for i, ch := range []rune(p.Name) {
-			put(lx+i, p.Y-rows, Cell{ch, RGB{230, 230, 230}})
 		}
 	}
 	return out

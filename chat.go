@@ -61,9 +61,10 @@ func say(p *Player, text string) {
 		if t == "" {
 			return
 		}
+		p.Msg, p.MsgAt, p.MsgParty = t, time.Now(), true
 		chatLog = append(chatLog, chatLine{p.Name, t, p.Party})
 	} else {
-		p.Msg, p.MsgAt = text, time.Now()
+		p.Msg, p.MsgAt, p.MsgParty = text, time.Now(), false
 		chatLog = append(chatLog, chatLine{p.Name, text, nil})
 	}
 	if len(chatLog) > 40 {
@@ -96,8 +97,9 @@ func wrap(s string, w int) []string {
 	return lines
 }
 
-// drawBubble dibuja un globo de diálogo con la punta en (cx, tipY).
-func (cv *canvas) drawBubble(cx, tipY int, text string) {
+// drawBubble dibuja un globo de diálogo con la punta en (cx, tipY). Los de
+// equipo llevan borde cian y solo los ve el equipo.
+func (cv *canvas) drawBubble(cx, tipY int, text string, party bool) {
 	lines := wrap(text, bubbleW-4)
 	iw := 0
 	for _, l := range lines {
@@ -110,6 +112,9 @@ func (cv *canvas) drawBubble(cx, tipY int, text string) {
 		y0 = 0
 	}
 	bg, border, fg := RGB{245, 245, 235}, RGB{60, 60, 80}, RGB{20, 20, 30}
+	if party {
+		bg, border, fg = RGB{225, 250, 255}, RGB{40, 200, 230}, RGB{10, 40, 60}
+	}
 	cv.box(x0, y0, bw, bh, bg, border)
 	for i, l := range lines {
 		y := y0 + 1 + i
@@ -125,7 +130,7 @@ func (cv *canvas) drawBubble(cx, tipY int, text string) {
 		cv.c[y][tx] = TCell{'┬', border, bg}
 	}
 	if tipY >= y0+bh && tipY < cv.h && tx >= 0 && tx < cv.w {
-		cv.c[tipY][tx].Ch, cv.c[tipY][tx].Fg = '▼', RGB{245, 245, 235}
+		cv.c[tipY][tx].Ch, cv.c[tipY][tx].Fg = '▼', bg
 	}
 }
 

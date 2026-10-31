@@ -179,7 +179,15 @@ type npcLabel struct {
 func questLabels(st *Stats, ox, oy, vw, vh int, size byte) []npcLabel {
 	var out []npcLabel
 	for _, n := range npcs {
-		if n.Kind != 'q' || n.X < ox-20 || n.X > ox+vw+20 || n.Y < oy || n.Y > oy+vh+20 {
+		if n.X < ox-20 || n.X > ox+vw+20 || n.Y < oy || n.Y > oy+vh+20 {
+			continue
+		}
+		if n.Kind != 'q' {
+			h := npcHeight(size)
+			if size == 't' {
+				h = len(npcArt)
+			}
+			out = append(out, npcLabel{n.X - ox, n.Y - h - oy, n.Name + " [E]", '$'})
 			continue
 		}
 		mk := npcMark(st, n.ID)
@@ -192,23 +200,17 @@ func questLabels(st *Stats, ox, oy, vw, vh int, size byte) []npcLabel {
 	return out
 }
 
-func drawQuestLabels(cv *canvas, ls []npcLabel) {
-	for _, l := range ls {
-		c := RGB{170, 200, 255}
-		switch l.mark {
-		case '!':
-			c = RGB{255, 220, 60}
-		case '?':
-			c = RGB{120, 255, 140}
-		}
-		r := []rune(l.text)
-		for i, ch := range r {
-			x := l.x - len(r)/2 + i
-			if x >= 0 && x < cv.w && l.y >= 0 && l.y < cv.h {
-				cv.c[l.y][x].Ch, cv.c[l.y][x].Fg = ch, c
-			}
-		}
+// npcTagColor es el color de la etiqueta según la marca de misión.
+func npcTagColor(mark rune) RGB {
+	switch mark {
+	case '!':
+		return RGB{255, 220, 60}
+	case '?':
+		return RGB{120, 255, 140}
+	case '$':
+		return RGB{255, 220, 120}
 	}
+	return RGB{170, 200, 255}
 }
 
 func objectiveMarks(st *Stats) [][2]int {

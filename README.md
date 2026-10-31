@@ -43,7 +43,8 @@ Más imágenes en [docs/img](docs/img), entre ellas el
 - Pueblos y ciudades a escala de los personajes: casas con puerta y ventanas,
   murallas, torres, templos, puestos de mercado, pozos y calles empedradas.
 - Cada NPC tiene su propio dibujo, del mismo estilo que los personajes, y parpadea.
-- Equipos de hasta 4 jugadores con XP compartida y chat de equipo.
+- Equipos de hasta 4 jugadores con XP compartida y chat de equipo; sus globos
+  llevan borde cian y solo los ve el equipo.
 - Cuentas con contraseña (bcrypt) o partida rápida como invitado.
 - Panel de administración y una CLI para ver quién está conectado.
 - Funciona en truecolor, 256 o 16 colores. Solo manda al terminal las celdas
@@ -75,7 +76,18 @@ Más imágenes en [docs/img](docs/img), entre ellas el
 
 Hace falta Go 1.27 o más nuevo.
 
+Para instalarlo directo desde GitHub:
+
 ```
+go install github.com/xoginger/LagoLunar@latest
+```
+
+Eso deja un binario llamado `LagoLunar` en `$(go env GOPATH)/bin`. Para
+compilar desde el código clonado:
+
+```
+git clone https://github.com/xoginger/LagoLunar.git
+cd LagoLunar
 go build -o ascii-ssh-game .
 ```
 
@@ -122,6 +134,14 @@ loginctl enable-linger $USER
 ```
 
 Para ver los logs: `journalctl --user -u lago-lunar -f`.
+
+### Respaldos
+
+Al arrancar y luego una vez al día el servidor copia `accounts.json` y
+`bans.json` a `DATA_DIR/backups/` con la fecha en el nombre
+(`accounts-2026-10-31.json`). Se guardan los últimos 14 de cada uno; los más
+viejos se borran solos. Para restaurar, detén el servidor y copia el respaldo
+encima del archivo original.
 
 ## Conectarse
 
@@ -172,6 +192,7 @@ Todo vive en `DATA_DIR`:
 | `admin.log` | acciones de los admins |
 | `bans.json` | cuentas e IPs baneadas, jugadores silenciados |
 | `online.json` | jugadores conectados, se reescribe cada 5 s |
+| `backups/` | respaldos diarios de `accounts.json` y `bans.json` (los últimos 14) |
 
 No subas esta carpeta a ningún lado; ya está en `.gitignore`.
 
@@ -189,6 +210,8 @@ combat.go      enemigos, clases, combate y simulación
 anim.go        poses de ataque, proyectiles y efectos
 items.go       objetos, inventario y NPCs
 towns.go       casas, murallas y trazado de pueblos
+labels.go      acomodo de nombres flotantes para que no se encimen
+backups.go     respaldos diarios de cuentas y baneos
 npcs_gen.go    dibujos de los NPCs (generado con tools/gen_npcs.py)
 ui_shop.go     tienda e inventario
 quests.go      misiones y zonas seguras

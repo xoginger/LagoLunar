@@ -390,12 +390,6 @@ func drawNPCs(layer map[int]Cell, vx, vy, vw, vh int, size byte, now time.Time) 
 					}
 				}
 			}
-			if n.Kind != 'q' {
-				lab := []rune(n.Name + " [E]")
-				for i, ch := range lab {
-					layer[(n.Y-h)*W+n.X-len(lab)/2+i] = Cell{ch, RGB{255, 220, 120}}
-				}
-			}
 			continue
 		}
 		art := npcArt
@@ -418,13 +412,6 @@ func drawNPCs(layer map[int]Cell, vx, vy, vw, vh int, size byte, now time.Time) 
 				}
 				layer[(n.Y-h+1+r)*W+n.X-len(lr)/2+i] = Cell{ch, c}
 			}
-		}
-		if n.Kind == 'q' {
-			continue // la etiqueta se dibuja por jugador (! o ?)
-		}
-		lab := []rune(n.Name + " [E]")
-		for i, ch := range lab {
-			layer[(n.Y-h)*W+n.X-len(lab)/2+i] = Cell{ch, RGB{255, 220, 120}}
 		}
 	}
 }
