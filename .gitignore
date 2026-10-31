@@ -1,0 +1,24 @@
+# binarios
+/ascii-ssh-game
+/asciigame
+/game
+/testclient
+/titleshot
+/loadtest
+*-linux-amd64
+*.test
+*.exe
+
+# datos del servidor (cuentas, bitácoras, baneos)
+data/
+*.log
+*.ansi
+
+# llaves del host SSH
+.ssh/
+*_ed25519*
+*.pem
+*.key
+
+__pycache__/
+.DS_Store

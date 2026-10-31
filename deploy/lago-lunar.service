@@ -1,0 +1,24 @@
+# Servicio de usuario de systemd para Lago Lunar.
+# Instalar:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/lago-lunar.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now lago-lunar
+#   loginctl enable-linger $USER   # para que siga corriendo sin sesión abierta
+# Logs: journalctl --user -u lago-lunar -f
+
+[Unit]
+Description=Lago Lunar (MMORPG ASCII por SSH)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/ascii-ssh-game
+ExecStart=%h/ascii-ssh-game/ascii-ssh-game
+Environment=PORT=5230
+Environment=DATA_DIR=%h/ascii-ssh-game/data
+Environment=ADMINS=
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
